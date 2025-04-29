@@ -1,0 +1,155 @@
+SiteMap; 
+
+🌐 ENTRY POINT 
+
+├── 0. Authentication 
+
+│   ├── Login 
+
+│   ├── Signup 
+
+│   └── Forgot Password 
+
+  
+
+🏢 WORKSPACE MODULE 
+
+├── 1. Workspace 
+
+│   ├── Workspace Selector (TopNav Dropdown) 
+
+│   ├── Create New Workspace 
+
+│   ├── Workspace Dashboard 
+
+│   ├── Workspace Settings 
+
+│   │   ├── Branding 
+
+│   │   ├── Usage & Billing 
+
+│   │   ├── API Keys & AI Tokens 
+
+│   │   └── Audit Logs 
+
+│   └── Members & Roles 
+
+│       ├── Invite Member 
+
+│       └── Role Management 
+
+  
+
+📁 PROJECT MODULE 
+
+├── 2. Project 
+
+│   ├── Project List 
+
+│   ├── Create New Project 
+
+│   └── Project Dashboard (Overview) 
+
+  
+
+🧪 TEST CASE MODULE 
+
+├── 3. Test Case Repository 
+
+│   ├── Folder Tree View 
+
+│   ├── Test Case Table/List View 
+
+│   ├── Create / Edit Test Case 
+
+│   ├── Bulk Import / Export 
+
+│   └── Test Case History & Versioning 
+
+  
+
+🤖 AI MODULE (Integration with RaptorAssist) 
+
+├── 4. AI Test Generation 
+
+│   ├── From User Story (JIRA/Azure/SeasiaConnect) 
+
+│   ├── From Swagger / API Specs 
+
+│   ├── From Uploaded Docs / PDFs 
+
+│   └── From UI Recording / Screenshots 
+
+  
+
+📋 TEST RUNS MODULE 
+
+├── 5. Test Execution 
+
+│   ├── Create Test Cycle 
+
+│   ├── Assign Testers 
+
+│   ├── Execution Console 
+
+│   │   ├── Manual Steps 
+
+│   │   └── Upload Logs / Evidence 
+
+│   └── AI Auto-Fill Suggestion Panel 
+
+  
+
+🐞 DEFECT MANAGEMENT 
+
+├── 6. Bugs & Defects 
+
+│   ├── Defect List (Linked to Cases) 
+
+│   ├── Create / Sync Defect (JIRA, Azure, SeasiaConnect) 
+
+│   ├── Duplicate Detector (AI) 
+
+│   └── Defect Lifecycle View (Status, RCA, etc.) 
+
+  
+
+📊 TRACEABILITY 
+
+├── 7. Requirement Traceability Matrix (RTM) 
+
+│   ├── JIRA / Azure / SeasiaConnect Import 
+
+│   ├── Map to Test Cases 
+
+│   └── Show Test Coverage + Gaps 
+
+  
+
+🤖 AUTOMATION INTEGRATION 
+
+├── 8. Test Automation Hub 
+
+│   ├── GitHub / GitLab Test Jobs View 
+
+│   ├── Trigger from CI/CD 
+
+│   ├── Flaky Test Detection 
+
+│   └── AI-based Automation Candidate Detection 
+
+  
+
+📈 REPORTING & INSIGHTS 
+
+├── 9. Reports & Analytics 
+
+│   ├── Test Run Summary 
+
+│   ├── Defect Summary 
+
+│   ├── Requirement Coverage 
+
+│   ├── AI Risk Heatmap 
+
+│   └── Export (PDF, Excel) 
