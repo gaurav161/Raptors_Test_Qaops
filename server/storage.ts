@@ -58,7 +58,7 @@ export interface IStorage {
   updateTestExecutionItem(id: number, data: Partial<TestExecutionItem>): Promise<TestExecutionItem>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 export class MemStorage implements IStorage {
@@ -71,7 +71,7 @@ export class MemStorage implements IStorage {
   private testExecutions: Map<number, TestExecution>;
   private testExecutionItems: Map<number, TestExecutionItem>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any;
   
   private currentUserId: number;
   private currentWorkspaceId: number;

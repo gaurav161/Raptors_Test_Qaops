@@ -11,6 +11,7 @@ import {
   insertTestExecutionSchema,
   insertTestExecutionItemSchema
 } from "@shared/schema";
+import { generateTestCase, generateTestCasesFromFeatureName } from "./openai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -442,6 +443,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       res.status(500).json({ message: "Failed to update test execution item" });
     }
+  });
+
+  // AI Test Generation API
+  app.post("/api/generate-test-cases", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { featureDescription, featureName, numTestCases = 1 } = req.body;
+      
+      if (!featureDescription && !featureName) {
+        return res.status(400).json({ 
+          message: "Either featureDescription or featureName is required"
+        });
+      }
+      
+      let testCases;
+      if (featureDescription) {
+        testCases = await generateTestCase(featureDescription, numTestCases);
+      } else {
+        testCases = await generateTestCasesFromFeatureName(featureName, numTestCases);
+      }
+      
+      res.json(testCases);
+    } catch (err) {
+      console.error("Error generating test cases:", err);
+      res.status(500).json({ 
+        message: "Failed to generate test cases",
+        error: err.message 
+      });
+    }
+  });
+
+  // Export test cases as CSV
+  app.get("/api/projects/:projectId/test-cases/export", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user is a member of the workspace that owns this project
+      const isMember = await storage.isWorkspaceMember(project.workspace_id, req.user.id);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not authorized to access this project" });
+      }
+      
+      const testCases = await storage.getTestCasesByProjectId(projectId);
+      
+      // Generate CSV content
+      let csvContent = "Test ID,Name,Type,Priority,Status,Description,Preconditions,Steps,Tags\n";
+      
+      testCases.forEach(testCase => {
+        const steps = JSON.parse(testCase.steps as string);
+        let stepsText = '';
+        
+        if (Array.isArray(steps)) {
+          stepsText = steps.map(step => 
+            `Step ${step.id}: ${step.action} -> ${step.expected_result}`
+          ).join(" | ");
+        }
+        
+        // Sanitize fields for CSV by wrapping in quotes and escaping existing quotes
+        const sanitize = (text) => {
+          if (text === null || text === undefined) return '';
+          return `"${String(text).replace(/"/g, '""')}"`;
+        };
+        
+        csvContent += [
+          sanitize(testCase.test_id),
+          sanitize(testCase.name),
+          sanitize(testCase.type),
+          sanitize(testCase.priority),
+          sanitize(testCase.status),
+          sanitize(testCase.description),
+          sanitize(testCase.preconditions),
+          sanitize(stepsText),
+          sanitize(testCase.tags)
+        ].join(",") + "\n";
+      });
+      
+      // Set response headers
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="test-cases-project-${projectId}.csv"`);
+      
+      res.send(csvContent);
+    } catch (err) {
+      console.error("Error exporting test cases:", err);
+      res.status(500).json({ message: "Failed to export test cases" });
+    }
+  });
+
+  // Get Sample CSV template
+  app.get("/api/test-cases/sample-template", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const csvTemplate = 
+      "Test ID,Name,Type,Priority,Status,Description,Preconditions,Steps,Tags\n" +
+      "TC-0001,\"Login with valid credentials\",\"Functional\",\"High\",\"Active\"," +
+      "\"Verify users can login with valid credentials\",\"User exists in the system\"," +
+      "\"Step 1: Navigate to login page -> User should see login form | " +
+      "Step 2: Enter valid username and password -> Fields should accept input | " +
+      "Step 3: Click login button -> User should be logged in and redirected to dashboard\"," +
+      "\"login,authentication,smoke\"\n" +
+      "TC-0002,\"Password reset functionality\",\"Functional\",\"Medium\",\"Active\"," +
+      "\"Verify users can reset their password\",\"User exists in the system\"," +
+      "\"Step 1: Navigate to login page -> User should see login form | " +
+      "Step 2: Click on 'Forgot password' link -> User should be redirected to password reset page | " +
+      "Step 3: Enter registered email and submit -> System should send password reset email\"," +
+      "\"password-reset,authentication\"";
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="test-cases-template.csv"');
+    
+    res.send(csvTemplate);
   });
 
   // Create HTTP server
