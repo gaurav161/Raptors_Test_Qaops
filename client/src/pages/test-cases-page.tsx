@@ -11,12 +11,14 @@ import { Project, Folder, TestCase } from "@shared/schema";
 import FolderTree from "@/components/test-case/folder-tree";
 import TestCaseList from "@/components/test-case/test-case-list";
 import TestCaseForm from "@/components/test-case/test-case-form";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TestCasesPage() {
   const { projectId } = useParams();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeFolder, setActiveFolder] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
   
   const { data: project } = useQuery<Project>({
     queryKey: [`/api/projects/${projectId}`],
@@ -99,13 +101,53 @@ export default function TestCasesPage() {
                   accept=".csv"
                   className="hidden"
                   onChange={(e) => {
-                    // Handle CSV upload logic
                     const file = e.target.files?.[0];
-                    if (file) {
+                    if (file && projectId) {
+                      const reader = new FileReader();
+                      reader.onload = async (event) => {
+                        try {
+                          const csvData = event.target?.result as string;
+
+                          // Call the import API with the CSV data
+                          const response = await fetch(`/api/projects/${projectId}/test-cases/import`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                              csvData, 
+                              folderId: activeFolder || 0
+                            }),
+                          });
+
+                          if (!response.ok) {
+                            throw new Error('Failed to import test cases');
+                          }
+
+                          const result = await response.json();
+                          
+                          toast({
+                            title: 'Import Completed',
+                            description: `Successfully imported ${result.success} test case(s). ${result.failed > 0 ? `Failed to import ${result.failed} test case(s).` : ''}`,
+                            variant: result.failed > 0 ? 'destructive' : 'default',
+                          });
+
+                          // Refresh the test cases list
+                          refetch();
+
+                        } catch (error) {
+                          console.error('Import error:', error);
+                          toast({
+                            title: 'Import Failed',
+                            description: error.message || 'An error occurred during import',
+                            variant: 'destructive',
+                          });
+                        }
+                      };
+                      
                       // Reset the input value so the same file can be selected again
                       e.target.value = '';
-                      // TODO: Implement actual CSV import logic
-                      alert('CSV import functionality will be implemented in a future update.');
+                      reader.readAsText(file);
                     }
                   }}
                 />

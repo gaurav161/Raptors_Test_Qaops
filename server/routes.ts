@@ -566,6 +566,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.send(csvTemplate);
   });
+  
+  // Import test cases from CSV
+  app.post("/api/projects/:projectId/test-cases/import", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user is a member of the workspace that owns this project
+      const isMember = await storage.isWorkspaceMember(project.workspace_id, req.user.id);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not authorized to access this project" });
+      }
+      
+      const { csvData, folderId } = req.body;
+      
+      if (!csvData) {
+        return res.status(400).json({ message: "CSV data is required" });
+      }
+      
+      // Parse CSV data
+      const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV file is empty or missing data rows" });
+      }
+      
+      // Parse header row
+      const header = lines[0].toLowerCase();
+      const columns = parseCSVLine(header);
+      
+      // Find column indices
+      const nameIndex = columns.findIndex(col => col.includes('name'));
+      const typeIndex = columns.findIndex(col => col.includes('type'));
+      const priorityIndex = columns.findIndex(col => col.includes('priority'));
+      const statusIndex = columns.findIndex(col => col.includes('status'));
+      const descriptionIndex = columns.findIndex(col => col.includes('description'));
+      const preconditionsIndex = columns.findIndex(col => col.includes('preconditions'));
+      const stepsIndex = columns.findIndex(col => col.includes('steps'));
+      const tagsIndex = columns.findIndex(col => col.includes('tags'));
+      
+      // Validate that required columns are present
+      if (nameIndex === -1 || stepsIndex === -1) {
+        return res.status(400).json({ 
+          message: "Invalid CSV format. Missing required columns: name and steps are required." 
+        });
+      }
+      
+      const importResults = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
+      
+      // Process data rows
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue; // Skip empty lines
+        
+        try {
+          const fields = parseCSVLine(line);
+          
+          // Extract data using column indices
+          const name = fields[nameIndex] || "";
+          const type = (fields[typeIndex] || "Functional").trim();
+          const priority = (fields[priorityIndex] || "Medium").trim();
+          const status = (fields[statusIndex] || "Draft").trim();
+          const description = fields[descriptionIndex] || "";
+          const preconditions = fields[preconditionsIndex] || "";
+          const stepsStr = fields[stepsIndex] || "";
+          const tagsStr = fields[tagsIndex] || "";
+          
+          if (!name) {
+            throw new Error("Test case name is required");
+          }
+          
+          // Parse steps
+          const steps = parseSteps(stepsStr);
+          
+          // Parse tags
+          const tags = tagsStr.split(',').map(tag => tag.trim()).filter(Boolean);
+          
+          // Generate test ID
+          const count = await storage.getTestCaseCount(projectId);
+          const testId = `TC-${(count + 1).toString().padStart(4, '0')}`;
+          
+          // Create test case
+          await storage.createTestCase({
+            name,
+            type,
+            priority,
+            status,
+            description,
+            preconditions,
+            tags,
+            steps,
+            folder_id: parseInt(folderId) || 0,
+            project_id: projectId,
+            created_by: req.user.id,
+            test_id: testId
+          });
+          
+          importResults.success++;
+        } catch (error) {
+          importResults.failed++;
+          importResults.errors.push(`Row ${i}: ${error.message}`);
+        }
+      }
+      
+      res.json(importResults);
+    } catch (err) {
+      console.error("Import error:", err);
+      res.status(500).json({ message: "Failed to import test cases" });
+    }
+  });
+  
+  // Helper function to parse CSV line properly
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i+1] === '"') {
+          // Handle escaped quotes ""
+          current += '"';
+          i++;
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // End of field
+        result.push(current);
+        current = '';
+      } else {
+        // Normal character
+        current += char;
+      }
+    }
+    
+    // Add the last field
+    result.push(current);
+    
+    return result;
+  }
+  
+  // Parse steps from string format
+  function parseSteps(stepsStr: string): any[] {
+    const steps = [];
+    
+    // Different formats:
+    // 1. "Step 1: Action -> Expected Result | Step 2: Action -> Expected Result"
+    // 2. "1. Action | Expected Result; 2. Action | Expected Result"
+    
+    // First, try to split by pipe & arrow
+    if (stepsStr.includes('->')) {
+      // Format: "Step 1: Action -> Expected Result | Step 2: Action -> Expected Result"
+      const stepParts = stepsStr.split('|');
+      
+      for (let i = 0; i < stepParts.length; i++) {
+        const stepPart = stepParts[i].trim();
+        if (!stepPart) continue;
+        
+        const [actionPart, resultPart] = stepPart.split('->');
+        if (!actionPart || !resultPart) continue;
+        
+        // Extract action without step number
+        const action = actionPart.replace(/^Step \d+:\s*/, '').trim();
+        const expected_result = resultPart.trim();
+        
+        steps.push({
+          id: i + 1,
+          action,
+          expected_result
+        });
+      }
+    } else if (stepsStr.includes('|')) {
+      // Format: "1. Action | Expected Result; 2. Action | Expected Result"
+      const stepParts = stepsStr.split(';');
+      
+      for (let i = 0; i < stepParts.length; i++) {
+        const stepPart = stepParts[i].trim();
+        if (!stepPart) continue;
+        
+        const [actionPart, resultPart] = stepPart.split('|');
+        if (!actionPart || !resultPart) continue;
+        
+        // Extract action without step number
+        const action = actionPart.replace(/^\d+\.\s*/, '').trim();
+        const expected_result = resultPart.trim();
+        
+        steps.push({
+          id: i + 1,
+          action,
+          expected_result
+        });
+      }
+    }
+    
+    // If no steps were parsed but there's content, add it as a single step
+    if (steps.length === 0 && stepsStr) {
+      steps.push({
+        id: 1,
+        action: "Perform test actions",
+        expected_result: stepsStr.trim()
+      });
+    }
+    
+    // If no steps at all, add an empty step
+    if (steps.length === 0) {
+      steps.push({
+        id: 1,
+        action: "",
+        expected_result: ""
+      });
+    }
+    
+    return steps;
+  }
 
   // Create HTTP server
   const httpServer = createServer(app);
