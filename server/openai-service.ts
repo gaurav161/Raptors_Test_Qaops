@@ -94,9 +94,9 @@ Response should be structured as a JSON array of test cases with this format:
       })),
       tags: tc.tags || []
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating test cases:', error);
-    throw new Error(`Failed to generate test cases: ${error.message}`);
+    throw new Error(`Failed to generate test cases: ${error.message || 'Unknown error'}`);
   }
 }
 

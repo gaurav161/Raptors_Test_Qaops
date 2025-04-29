@@ -83,14 +83,43 @@ export default function TestCasesPage() {
               <p className="mt-1 text-sm text-gray-500">Manage and organize your test cases</p>
             </div>
             <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-              <Button variant="outline">
+              <div className="relative">
+                <a href="/api/test-cases/sample-template" download="test-cases-template.csv" className="absolute inset-0" aria-hidden="true" />
+                <Button variant="outline" className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Sample File
+                </Button>
+              </div>
+              <Button variant="outline" onClick={() => document.getElementById('csv-file-upload')?.click()}>
                 <Upload className="mr-2 h-4 w-4" />
                 Import
+                <input
+                  id="csv-file-upload"
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    // Handle CSV upload logic
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Reset the input value so the same file can be selected again
+                      e.target.value = '';
+                      // TODO: Implement actual CSV import logic
+                      alert('CSV import functionality will be implemented in a future update.');
+                    }
+                  }}
+                />
               </Button>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+              <a 
+                href={projectId ? `/api/projects/${projectId}/test-cases/export` : '#'} 
+                download={`test-cases-project-${projectId}.csv`}
+                className={!projectId ? 'pointer-events-none opacity-50' : ''}
+              >
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </a>
               <Button onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Test Case

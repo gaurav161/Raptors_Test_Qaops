@@ -466,11 +466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(testCases);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error generating test cases:", err);
       res.status(500).json({ 
         message: "Failed to generate test cases",
-        error: err.message 
+        error: err.message || "Unknown error"
       });
     }
   });
@@ -509,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Sanitize fields for CSV by wrapping in quotes and escaping existing quotes
-        const sanitize = (text) => {
+        const sanitize = (text: any) => {
           if (text === null || text === undefined) return '';
           return `"${String(text).replace(/"/g, '""')}"`;
         };
@@ -532,9 +532,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="test-cases-project-${projectId}.csv"`);
       
       res.send(csvContent);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error exporting test cases:", err);
-      res.status(500).json({ message: "Failed to export test cases" });
+      res.status(500).json({ 
+        message: "Failed to export test cases", 
+        error: err.message || "Unknown error" 
+      });
     }
   });
 
