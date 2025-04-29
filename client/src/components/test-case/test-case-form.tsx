@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Folder, TestCase, insertTestCaseSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 
 interface TestCaseFormProps {
   projectId: number;
@@ -49,6 +50,9 @@ const testCaseFormSchema = z.object({
 
 export default function TestCaseForm({ projectId, folders = [], initialData, isReadOnly = false, initialFolderId, onSuccess }: TestCaseFormProps) {
   const { toast } = useToast();
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [featureDescription, setFeatureDescription] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Fetch folders if not provided
   const { data: fetchedFolders } = useQuery<Folder[]>({
@@ -171,6 +175,70 @@ export default function TestCaseForm({ projectId, folders = [], initialData, isR
     form.setValue("steps", steps.filter(s => s.id !== id));
   };
   
+  // AI test case generation mutation
+  const generateTestCaseMutation = useMutation({
+    mutationFn: async (description: string) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/ai/generate-test-case`,
+        { description }
+      );
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // Update form with AI generated data
+      form.setValue("name", data.name);
+      form.setValue("description", data.description);
+      form.setValue("priority", data.priority);
+      form.setValue("type", data.type);
+      form.setValue("preconditions", data.preconditions);
+      
+      // Convert steps to the correct format
+      const steps = data.steps.map((step: any, index: number) => ({
+        id: index + 1,
+        action: step.action,
+        expected_result: step.expected_result
+      }));
+      
+      form.setValue("steps", steps);
+      
+      // Convert tags to comma separated string
+      if (data.tags && Array.isArray(data.tags)) {
+        form.setValue("tags", data.tags.join(", "));
+      }
+      
+      toast({
+        title: "Success",
+        description: "Test case generated successfully",
+      });
+      
+      setIsAIDialogOpen(false);
+      setIsGenerating(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate test case: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsGenerating(false);
+    },
+  });
+  
+  const handleGenerateTestCase = () => {
+    if (!featureDescription) {
+      toast({
+        title: "Error",
+        description: "Please provide a feature description",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsGenerating(true);
+    generateTestCaseMutation.mutate(featureDescription);
+  };
+
   const onSubmit = (data: z.infer<typeof testCaseFormSchema>) => {
     createTestCaseMutation.mutate(data);
   };
@@ -365,15 +433,26 @@ export default function TestCaseForm({ projectId, folders = [], initialData, isR
           <div className="flex items-center justify-between mb-2">
             <FormLabel className="text-base">Test Steps</FormLabel>
             {!isReadOnly && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAddStep}
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                Add Step
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsAIDialogOpen(true)}
+                >
+                  <Sparkles className="mr-1 h-4 w-4" />
+                  AI Generate
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddStep}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Step
+                </Button>
+              </div>
             )}
           </div>
           
@@ -487,6 +566,57 @@ export default function TestCaseForm({ projectId, folders = [], initialData, isR
           </div>
         )}
       </form>
+
+      {/* AI Test Case Generation Dialog */}
+      <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Test Case with AI</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Describe the feature or functionality you want to test, and our AI will generate a complete test case with steps.
+            </p>
+            
+            <Textarea
+              placeholder="E.g., User login functionality with email and password validation, remember me option, and forgot password link."
+              rows={5}
+              className="resize-none"
+              value={featureDescription}
+              onChange={(e) => setFeatureDescription(e.target.value)}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsAIDialogOpen(false)}
+              disabled={isGenerating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleGenerateTestCase}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }
