@@ -30,7 +30,7 @@ export default function TestCasesPage() {
     enabled: !!projectId,
   });
   
-  const { data: testCases } = useQuery<TestCase[]>({
+  const { data: testCases, refetch } = useQuery<TestCase[]>({
     queryKey: [
       activeFolder 
         ? `/api/folders/${activeFolder}/test-cases` 
@@ -135,7 +135,7 @@ export default function TestCasesPage() {
                           // Refresh the test cases list
                           refetch();
 
-                        } catch (error) {
+                        } catch (error: any) {
                           console.error('Import error:', error);
                           toast({
                             title: 'Import Failed',
@@ -171,8 +171,9 @@ export default function TestCasesPage() {
           
           {/* Content layout: Two panels */}
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Folder tree panel */}
+            {/* Test Suites panel */}
             <div className="w-full lg:w-1/4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-lg font-semibold mb-4">Test Suites</h3>
               <FolderTree 
                 folders={folders || []} 
                 onSelectFolder={handleFolderSelect} 
@@ -236,6 +237,7 @@ export default function TestCasesPage() {
             folders={folders || []} 
             onSuccess={() => {
               setIsCreateModalOpen(false);
+              refetch();
             }}
             initialFolderId={activeFolder}
           />

@@ -22,7 +22,7 @@ interface FolderTreeProps {
 }
 
 const createFolderSchema = z.object({
-  name: z.string().min(1, "Folder name is required"),
+  name: z.string().min(1, "Test suite name is required"),
   parent_id: z.number().nullable(),
 });
 
@@ -50,7 +50,7 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/folders`] });
       toast({
         title: "Success",
-        description: "Folder created successfully",
+        description: "Test suite created successfully",
       });
       form.reset();
       setIsCreateModalOpen(false);
@@ -58,7 +58,7 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: `Failed to create folder: ${error.message}`,
+        description: `Failed to create test suite: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -99,6 +99,13 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
   
   const rootFolders = buildFolderTree(null);
   
+  // Count all test cases in a folder and its subfolders recursively
+  const countTestCasesInFolder = (folderId: number): number => {
+    // This would be replaced with actual test case counts from a query
+    // Just a placeholder for now
+    return Math.floor(Math.random() * 20) + 1;
+  };
+  
   const renderFolderTree = (folderList: Folder[], level = 0) => {
     return folderList.map(folder => {
       const children = buildFolderTree(folder.id);
@@ -107,11 +114,14 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
       const isSelected = selectedFolderId === folder.id;
       
       return (
-        <div key={folder.id} style={{ marginLeft: `${level * 16}px` }}>
+        <div key={folder.id} className="relative" style={{ paddingLeft: level > 0 ? `${level * 16}px` : '0' }}>
+          {level > 0 && (
+            <div className="absolute left-0 top-0 h-full w-px bg-gray-200 ml-2" />
+          )}
           <div 
             className={cn(
               "flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer",
-              isSelected && "bg-indigo-50 border-l-2 border-indigo-500"
+              isSelected && "bg-blue-50 border-l-2 border-blue-500"
             )}
             onClick={() => onSelectFolder(folder.id)}
           >
@@ -138,17 +148,28 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
               ) : (
                 <FolderIcon className="text-gray-500 mr-2 h-4 w-4" />
               )}
-              <span className="text-sm">{folder.name}</span>
+              <span className="text-sm font-medium">{folder.name}</span>
             </div>
-            <span className="text-xs text-gray-500">
-              {/* This would be the count of test cases in the folder */}
-              {/* Placeholder for now */}
-              {Math.floor(Math.random() * 100)}
-            </span>
+            <div className="flex items-center">
+              <span className="text-xs text-gray-500 mr-2">
+                {countTestCasesInFolder(folder.id)}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCreateFolder(folder.id);
+                }}
+              >
+                <Plus className="h-3 w-3 text-gray-500" />
+              </Button>
+            </div>
           </div>
           
           {isExpanded && hasChildren && (
-            <div className="pl-5 space-y-1 mt-1">
+            <div className="space-y-1 mt-1">
               {renderFolderTree(children, level + 1)}
             </div>
           )}
@@ -159,29 +180,24 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium">Folders</h2>
-        <div className="flex space-x-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={() => handleCreateFolder(null)}
-          >
-            <Plus className="h-4 w-4 text-gray-500" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4 text-gray-500" />
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-blue-600 hover:text-blue-800 -ml-2 px-2"
+          onClick={() => handleCreateFolder(null)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          New Test Suite
+        </Button>
       </div>
       
-      <div className="mb-3">
+      <div className="my-3">
         <div className="relative">
           <Input 
             type="text" 
             className="pl-9 pr-3 py-2 text-sm" 
-            placeholder="Search folders"
+            placeholder="Search test suites"
             value={searchQuery}
             onChange={handleSearchChange}
           />
@@ -192,12 +208,12 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
       </div>
       
       <ScrollArea className="max-h-[calc(100vh-320px)]">
-        <ul className="space-y-1">
+        <ul className="space-y-1 mt-2">
           <li>
             <div 
               className={cn(
                 "flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer",
-                !selectedFolderId && "bg-gray-100"
+                !selectedFolderId && "bg-blue-50 border-l-2 border-blue-500"
               )}
               onClick={() => onSelectFolder(null)}
             >
@@ -206,7 +222,8 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
                 <span className="text-sm font-medium">All Test Cases</span>
               </div>
               <span className="text-xs text-gray-500">
-                {folders.length > 0 ? folders.length : 0}
+                {/* Placeholder for total test case count */}
+                {folders.length > 0 ? folders.length * 5 : 0}
               </span>
             </div>
           </li>
@@ -215,13 +232,13 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
         </ul>
       </ScrollArea>
       
-      {/* Create Folder Modal */}
+      {/* Create Test Suite Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogTitle>Create New Test Suite</DialogTitle>
             <DialogDescription>
-              Create a new folder to organize your test cases.
+              Create a new test suite to organize your test cases.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -231,9 +248,9 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Folder Name</FormLabel>
+                    <FormLabel>Test Suite Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter folder name" {...field} />
+                      <Input placeholder="Enter test suite name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -243,10 +260,10 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
               <div className="text-sm text-gray-500">
                 {parentFolderId ? (
                   <p>
-                    Parent Folder: {folders.find(f => f.id === parentFolderId)?.name}
+                    Parent Test Suite: {folders.find(f => f.id === parentFolderId)?.name}
                   </p>
                 ) : (
-                  <p>This will be a root level folder.</p>
+                  <p>This will be a root level test suite.</p>
                 )}
               </div>
               
@@ -262,7 +279,7 @@ export default function FolderTree({ folders, onSelectFolder, selectedFolderId, 
                   type="submit"
                   disabled={createFolderMutation.isPending}
                 >
-                  {createFolderMutation.isPending ? "Creating..." : "Create Folder"}
+                  {createFolderMutation.isPending ? "Creating..." : "Create Test Suite"}
                 </Button>
               </DialogFooter>
             </form>
