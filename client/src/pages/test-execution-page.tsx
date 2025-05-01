@@ -18,7 +18,7 @@ import { z } from "zod";
 import { Project, TestCase, TestExecution, TestExecutionItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, CheckCircle2, XCircle, AlertCircle, Clock, Search } from "lucide-react";
+import { PlusCircle, CheckCircle2, XCircle, AlertCircle, Clock, Search, CheckSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -130,6 +130,18 @@ export default function TestExecutionPage() {
     );
   };
   
+  const handleSelectAllTestCases = () => {
+    if (testCases && testCases.length > 0) {
+      if (selectedTestCases.length === testCases.length) {
+        // If all test cases are already selected, deselect all
+        setSelectedTestCases([]);
+      } else {
+        // Otherwise, select all test cases
+        setSelectedTestCases(testCases.map(tc => tc.id));
+      }
+    }
+  };
+  
   const handleSelectTestExecution = (executionId: number) => {
     setSelectedTestExecution(executionId);
   };
@@ -210,107 +222,122 @@ export default function TestExecutionPage() {
                     Create Test Cycle
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh]">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create New Test Cycle</DialogTitle>
                     <DialogDescription>
                       Create a new test execution cycle and select test cases to include.
                     </DialogDescription>
                   </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cycle Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter test cycle name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Describe the purpose of this test cycle" 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormLabel>Select Test Cases</FormLabel>
-                        <div className="relative mt-1 mb-2">
-                          <Input 
-                            type="text" 
-                            placeholder="Search test cases..." 
-                            className="pl-9" 
+                  <div className="overflow-y-auto max-h-[70vh] pr-2">
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Cycle Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter test cycle name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
-                          </div>
+                          <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Describe the purpose of this test cycle" 
+                                    {...field} 
+                                    className="h-20"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                        <ScrollArea className="h-[300px] border rounded-md p-2">
-                          {testCases?.map(testCase => (
-                            <div key={testCase.id} className="flex items-start p-2 hover:bg-gray-50 rounded">
-                              <Checkbox 
-                                id={`tc-${testCase.id}`}
-                                checked={selectedTestCases.includes(testCase.id)}
-                                onCheckedChange={() => handleToggleTestCase(testCase.id)}
-                                className="mt-1 mr-2"
-                              />
-                              <div>
-                                <label htmlFor={`tc-${testCase.id}`} className="text-sm font-medium cursor-pointer">
-                                  {testCase.test_id}: {testCase.name}
-                                </label>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {testCase.description?.slice(0, 100)}
-                                  {testCase.description && testCase.description.length > 100 ? '...' : ''}
-                                </p>
+                        
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <FormLabel className="mb-0">Select Test Cases</FormLabel>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              onClick={handleSelectAllTestCases}
+                              className="h-8"
+                            >
+                              <CheckSquare className="h-4 w-4 mr-1" />
+                              {selectedTestCases.length === testCases?.length ? "Deselect All" : "Select All"}
+                            </Button>
+                          </div>
+                          <div className="relative mt-1 mb-2">
+                            <Input 
+                              type="text" 
+                              placeholder="Search test cases..." 
+                              className="pl-9" 
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Search className="h-4 w-4 text-gray-400" />
+                            </div>
+                          </div>
+                          <ScrollArea className="h-[260px] border rounded-md p-2">
+                            {testCases?.map(testCase => (
+                              <div key={testCase.id} className="flex items-start p-2 hover:bg-gray-50 rounded">
+                                <Checkbox 
+                                  id={`tc-${testCase.id}`}
+                                  checked={selectedTestCases.includes(testCase.id)}
+                                  onCheckedChange={() => handleToggleTestCase(testCase.id)}
+                                  className="mt-1 mr-2"
+                                />
+                                <div>
+                                  <label htmlFor={`tc-${testCase.id}`} className="text-sm font-medium cursor-pointer">
+                                    {testCase.test_id}: {testCase.name}
+                                  </label>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {testCase.description?.slice(0, 80)}
+                                    {testCase.description && testCase.description.length > 80 ? '...' : ''}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                          {(!testCases || testCases.length === 0) && (
-                            <div className="p-4 text-center text-gray-500">
-                              No test cases found for this project.
-                            </div>
-                          )}
-                        </ScrollArea>
-                        <p className="text-sm text-gray-500 mt-2">
-                          {selectedTestCases.length} test cases selected
-                        </p>
-                      </div>
-                      
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsCreateModalOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          type="submit"
-                          disabled={createTestExecutionMutation.isPending || selectedTestCases.length === 0}
-                        >
-                          {createTestExecutionMutation.isPending ? "Creating..." : "Create Test Cycle"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
+                            ))}
+                            {(!testCases || testCases.length === 0) && (
+                              <div className="p-4 text-center text-gray-500">
+                                No test cases found for this project.
+                              </div>
+                            )}
+                          </ScrollArea>
+                          <p className="text-sm text-gray-500 mt-2">
+                            {selectedTestCases.length} test cases selected
+                          </p>
+                        </div>
+                        
+                        <DialogFooter className="pt-4 mt-4 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsCreateModalOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            type="submit"
+                            disabled={createTestExecutionMutation.isPending || selectedTestCases.length === 0}
+                          >
+                            {createTestExecutionMutation.isPending ? "Creating..." : "Create Test Cycle"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>
@@ -333,9 +360,9 @@ export default function TestExecutionPage() {
                       >
                         <h3 className="font-medium">{execution.name}</h3>
                         <p className="text-sm text-gray-500 mt-1">
-                          {new Date(execution.created_at).toLocaleDateString()}
+                          {execution.created_at ? new Date(execution.created_at).toLocaleDateString() : 'N/A'}
                         </p>
-                        <Badge variant={execution.status === "Completed" ? "success" : "outline"} className="mt-2">
+                        <Badge variant={"outline"} className={`mt-2 ${execution.status === "Completed" ? "bg-green-100 text-green-800" : ""}`}>
                           {execution.status}
                         </Badge>
                       </div>
@@ -383,11 +410,10 @@ export default function TestExecutionPage() {
                               </TableCell>
                               <TableCell>{testCase?.name}</TableCell>
                               <TableCell>
-                                <Badge variant={
-                                  testCase?.priority === "High" ? "destructive" : 
-                                  testCase?.priority === "Medium" ? "warning" : 
-                                  "default"
-                                }>
+                                <Badge 
+                                  variant={testCase?.priority === "High" ? "destructive" : "default"}
+                                  className={testCase?.priority === "Medium" ? "bg-yellow-100 text-yellow-800" : ""}
+                                >
                                   {testCase?.priority}
                                 </Badge>
                               </TableCell>
