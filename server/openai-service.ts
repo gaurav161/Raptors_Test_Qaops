@@ -1,6 +1,24 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ✅ Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ Load .env from the root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import OpenAI from 'openai';
 
-// The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// ✅ Log for debug (optional)
+console.log("✅ OPENAI_API_KEY Loaded:", process.env.OPENAI_API_KEY?.slice(0, 10) + '...');
+
+// ✅ Fail fast if missing
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("❌ OPENAI_API_KEY not found. Please check your .env file.");
+}
+
 const MODEL = "gpt-4o";
 
 const openai = new OpenAI({
@@ -29,7 +47,7 @@ export async function generateTestCase(
 ): Promise<GeneratedTestCase[]> {
   try {
     const prompt = `Generate ${numTestCases} test cases for the following feature or user story:
-    
+
 ${featureDescription}
 
 Each test case should include:
@@ -54,12 +72,10 @@ Response should be structured as a JSON array of test cases with this format:
         "id": 1,
         "action": "What the tester should do",
         "expected_result": "What should happen"
-      },
-      ...
+      }
     ],
-    "tags": ["tag1", "tag2", ...]
-  },
-  ...
+    "tags": ["tag1", "tag2"]
+  }
 ]`;
 
     const response = await openai.chat.completions.create({
@@ -75,12 +91,11 @@ Response should be structured as a JSON array of test cases with this format:
     }
 
     const parsedContent = JSON.parse(content);
-    
-    // Check if we have a testCases property or if the response is already an array
-    const testCases = Array.isArray(parsedContent) 
-      ? parsedContent 
+
+    const testCases = Array.isArray(parsedContent)
+      ? parsedContent
       : parsedContent.testCases || [];
-    
+
     return testCases.map((tc: any) => ({
       name: tc.name,
       description: tc.description,
@@ -95,7 +110,7 @@ Response should be structured as a JSON array of test cases with this format:
       tags: tc.tags || []
     }));
   } catch (error: any) {
-    console.error('Error generating test cases:', error);
+    console.error('❌ Error generating test cases:', error);
     throw new Error(`Failed to generate test cases: ${error.message || 'Unknown error'}`);
   }
 }
@@ -104,7 +119,6 @@ export async function generateTestCasesFromFeatureName(
   featureName: string,
   numTestCases: number = 1
 ): Promise<GeneratedTestCase[]> {
-  // For simple feature names, we'll ask OpenAI to imagine what the feature might entail
   const prompt = `Based on the feature name "${featureName}", imagine what this feature might do and generate ${numTestCases} test cases for it.`;
   return generateTestCase(prompt, numTestCases);
 }
