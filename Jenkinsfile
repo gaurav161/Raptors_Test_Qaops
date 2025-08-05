@@ -16,7 +16,7 @@ pipeline {
         stage('Build and Test') {
             steps {
                 dir('qa-automation') {
-                    echo 'Running Maven clean test...'
+                    echo '🔧 Running Maven clean test...'
                     sh 'mvn clean test'
                 }
             }
@@ -25,19 +25,20 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finished. Attempting to publish test results...'
+            echo '📦 Pipeline finished. Publishing test results...'
 
-            // ✅ Archive test report artifacts (for manual download if needed)
+            // ✅ Archive XML test report artifacts for download
             archiveArtifacts artifacts: 'qa-automation/target/surefire-reports/*.xml', fingerprint: true
 
-            // ✅ Publish JUnit test results (shows "Test Result" in UI)
+            // ✅ Publish JUnit XML test results (Test Result tab in Jenkins)
             junit testResults: 'qa-automation/target/surefire-reports/*.xml', allowEmptyResults: true
 
-            // ✅ Publish HTML report (shows clickable HTML link in UI)
-            publishHTML([
+            // ✅ Publish HTML TestNG Report (Requires TestNG HTML plugin or similar)
+            // Make sure this file exists: qa-automation/test-output/index.html
+            publishHTML(target: [
                 reportDir: 'qa-automation/test-output',
                 reportFiles: 'index.html',
-                reportName: 'TestNG HTML Report',
+                reportName: '📊 TestNG HTML Report',
                 keepAll: true,
                 alwaysLinkToLastBuild: true,
                 allowMissing: false
@@ -45,7 +46,11 @@ pipeline {
         }
 
         failure {
-            echo 'Pipeline failed. Please check logs for errors.'
+            echo '❌ Pipeline failed. Check logs and reports.'
+        }
+
+        success {
+            echo '✅ Pipeline completed successfully!'
         }
     }
 }
