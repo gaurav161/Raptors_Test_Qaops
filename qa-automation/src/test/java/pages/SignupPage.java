@@ -49,6 +49,14 @@ public class SignupPage {
         passwordField.clear();
         passwordField.sendKeys(password);
     }
+//    public String getSuccessMessage() {
+//        return driver.findElement(successMessage).getText();
+//    }
+//
+//    // ✅ Method to return the error message text
+//    public String getErrorMessage() {
+//        return driver.findElement(errorMessage).getText();
+//    }
 
 
     public void clickSignup() {

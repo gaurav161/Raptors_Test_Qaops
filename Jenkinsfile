@@ -27,11 +27,19 @@ pipeline {
         always {
             echo 'Pipeline finished. Attempting to publish test results...'
 
-            // ✅ Archive test reports for download
+            // ✅ Archive XML test reports
             archiveArtifacts artifacts: 'qa-automation/target/surefire-reports/*.xml', fingerprint: true
 
-            // ✅ Publish test results in Jenkins UI
+            // ✅ Publish JUnit XML test results
             junit 'qa-automation/target/surefire-reports/*.xml'
+
+            // ✅ Publish HTML TestNG Report (requires HTML Publisher Plugin)
+            publishHTML(target: [
+                reportDir: 'qa-automation/test-output',
+                reportFiles: 'index.html',
+                reportName: 'TestNG HTML Report',
+                keepAll: true
+            ])
         }
 
         failure {
