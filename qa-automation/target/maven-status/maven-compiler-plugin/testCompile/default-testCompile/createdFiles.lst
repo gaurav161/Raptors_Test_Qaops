@@ -1,0 +1,9 @@
+utilities.class
+base\TestBase.class
+tests\DashboardTests.class
+pages\LoginPage.class
+tests\LoginTests.class
+utilities\ConfigReader.class
+pages\DashboardPage.class
+tests\SignupTests.class
+pages\SignupPage.class

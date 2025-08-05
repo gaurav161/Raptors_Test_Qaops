@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven 3.9.9'      // This should match the name in Jenkins tools
-        jdk 'JDK 21'             // This should match the name in Jenkins tools
+        maven 'Maven 3.9.9'
+        jdk 'JDK 21'
     }
 
     stages {
@@ -13,24 +13,22 @@ pipeline {
             }
         }
 
-        stage('Build and Test') {
+        stage('Unit Test') {
             steps {
                 dir('qa-automation') {
                     sh 'mvn clean test'
+                    // Debug: Check if reports are generated
+                    sh 'ls -R target'
                 }
-            }
-        }
-
-        stage('Archive Test Results') {
-            steps {
-                junit 'qa-automation/target/surefire-reports/*.xml'
             }
         }
     }
 
     post {
         always {
-            echo 'Pipeline finished.'
+            echo 'Pipeline finished. Attempting to publish test results...'
+            // This path is from root workspace
+            junit 'qa-automation/target/surefire-reports/*.xml'
         }
         failure {
             echo 'Pipeline failed.'
