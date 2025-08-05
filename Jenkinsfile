@@ -27,18 +27,20 @@ pipeline {
         always {
             echo 'Pipeline finished. Attempting to publish test results...'
 
-            // ✅ Archive XML test reports
+            // ✅ Archive test report artifacts (for manual download if needed)
             archiveArtifacts artifacts: 'qa-automation/target/surefire-reports/*.xml', fingerprint: true
 
-            // ✅ Publish JUnit XML test results
-            junit 'qa-automation/target/surefire-reports/*.xml'
+            // ✅ Publish JUnit test results (shows "Test Result" in UI)
+            junit testResults: 'qa-automation/target/surefire-reports/*.xml', allowEmptyResults: true
 
-            // ✅ Publish HTML TestNG Report (requires HTML Publisher Plugin)
-            publishHTML(target: [
+            // ✅ Publish HTML report (shows clickable HTML link in UI)
+            publishHTML([
                 reportDir: 'qa-automation/test-output',
                 reportFiles: 'index.html',
                 reportName: 'TestNG HTML Report',
-                keepAll: true
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                allowMissing: false
             ])
         }
 
