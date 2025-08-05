@@ -13,12 +13,11 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
+        stage('Build and Test') {
             steps {
                 dir('qa-automation') {
+                    echo 'Running Maven clean test...'
                     sh 'mvn clean test'
-                    // Debug: Check if reports are generated
-                    sh 'ls -R target'
                 }
             }
         }
@@ -27,11 +26,16 @@ pipeline {
     post {
         always {
             echo 'Pipeline finished. Attempting to publish test results...'
-            // This path is from root workspace
+
+            // ✅ Archive test reports for download
+            archiveArtifacts artifacts: 'qa-automation/target/surefire-reports/*.xml', fingerprint: true
+
+            // ✅ Publish test results in Jenkins UI
             junit 'qa-automation/target/surefire-reports/*.xml'
         }
+
         failure {
-            echo 'Pipeline failed.'
+            echo 'Pipeline failed. Please check logs for errors.'
         }
     }
 }
